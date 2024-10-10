@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const { connectDB, syncDB } = require('./config/db');
 const authRoutes = require('./routes/auth');
+const featuresRoutes = require('./routes/features');
 
 // Connecter à MariaDB
 connectDB();
@@ -14,6 +15,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/features', featuresRoutes);
 
 // Port de l'application
 const PORT = process.env.PORT || 5000;

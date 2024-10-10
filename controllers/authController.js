@@ -2,9 +2,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Log = require('../models/Log');
+const Permission = require('../models/Permission'); // Importer le modèle Permission
 
 const register = async (req, res) => {
-    const { username, password, role } = req.body;
+    const { username, password, role, permissions } = req.body; // Ajouter les permissions
 
     try {
         let user = await User.findOne({ where: { username } });
@@ -25,6 +26,16 @@ const register = async (req, res) => {
             password: hashedPassword,
             role,
         });
+
+        // Ajouter les permissions
+        if (role !== 'admin' && permissions && Array.isArray(permissions)) {
+            for (const permission of permissions) {
+                await Permission.create({
+                    userId: user.id,
+                    permission
+                });
+            }
+        }
 
         // Ajouter un log
         await Log.create({
