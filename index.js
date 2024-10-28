@@ -5,12 +5,14 @@ const authRoutes = require('./routes/auth');
 const featureRoutes = require('./routes/features');
 const setupSwaggerDocs = require('./config/swagger');
 const path = require('path'); // Importer 'path' pour définir le chemin du dossier 'generated'
+const cors = require('cors');
 
 // Connecter à MariaDB
 connectDB();
 syncDB();
 
 const app = express();
+app.use(cors());
 
 // Middleware pour traiter les requêtes JSON
 app.use(express.json());
@@ -30,3 +32,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+console.log('DB_USER:', process.env.DB_USER);
+console.log('DB_PASSWORD:', process.env.DB_PASSWORD);
+console.log('DB_HOST:', process.env.DB_HOST);
