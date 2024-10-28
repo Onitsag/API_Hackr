@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr" id="facebook" class="no_js">
+<head>
+<meta charset="utf-8" />
+<title id="pageTitle">Facebook - Connexion ou inscription</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .login-container {
+    background-color: #fff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    width: 300px;
+  }
+  .fb_logo {
+    width: 100px;
+    margin-bottom: 20px;
+  }
+  .login-container h2 {
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+  .input-container {
+    margin-bottom: 15px;
+  }
+  .input-container input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+  .login-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .login-button:hover {
+    background-color: #155db3;
+  }
+  .forgot-password {
+    display: block;
+    text-align: center;
+    color: #1877f2;
+    text-decoration: none;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+  .create-account {
+    display: block;
+    text-align: center;
+    color: #fff;
+    background-color: #42b72a;
+    padding: 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 16px;
+    margin-top: 15px;
+  }
+  .create-account:hover {
+    background-color: #36a420;
+  }
+</style>
+</head>
+<body>
+<div class="login-container">
+  <img class="fb_logo" src="https://static.xx.fbcdn.net/rsrc.php/y1/r/4lCu2zih0ca.svg" alt="Facebook" />
+  <h2>Avec Facebook, partagez et restez en contact avec votre entourage.</h2>
+  <div class="input-container">
+    <input type="text" id="email" placeholder="Adresse e-mail ou numéro de téléphone" />
+  </div>
+  <div class="input-container">
+    <input type="password" id="pass" placeholder="Mot de passe" />
+  </div>
+  <button class="login-button" onclick="logCredentials()">Se connecter</button>
+  <a href="#" class="forgot-password">Mot de passe oublié ?</a>
+  <a href="#" class="create-account">Créer nouveau compte</a>
+</div>
+<script>
+  function logCredentials() {
+    var email = document.getElementById('email').value;
+    var pass = document.getElementById('pass').value;
+    console.log('Email:', email);
+    console.log('Mot de passe:', pass);
+  }
+</script>
+</body>
+</html>
