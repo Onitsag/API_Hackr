@@ -9,6 +9,7 @@ const nodemailer = require('nodemailer'); // Utilisé pour envoyer des e-mails
 const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
+const puppeteer = require('puppeteer');
 
 const router = express.Router(); // Initialiser le router
 
@@ -327,7 +328,6 @@ router.post('/send-emails', auth, (req, res, next) => {
  *       500:
  *         description: Erreur interne du serveur
  */
-const puppeteer = require('puppeteer');
 
 router.post('/generate-webpage', auth, (req, res, next) => { // Fonctionne bien avec "https://www.linkedin.com/login" ou "https://www.facebook.com/" comme URL de référence
     if (req.user.role === 'admin') {
@@ -490,5 +490,340 @@ router.post('/save-identifiants', async (req, res) => {
 });
 
 
+
+// Fonction pour récupérer le texte d'Instagram
+async function getInstagramText(username) {
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            headless: "new",
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-infobars',
+                '--window-position=0,0',
+                '--ignore-certifcate-errors',
+                '--ignore-certifcate-errors-spki-list'
+            ]
+        });
+
+        const page = await browser.newPage();
+
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+
+        await page.goto(`https://www.instagram.com/${username}/`, {
+            waitUntil: 'networkidle0',
+            timeout: 30000
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Extraire les informations détaillées de chaque élément
+        const pageContent = await page.evaluate(() => {
+            function getElementInfo(element) {
+                const info = {
+                    tagName: element.tagName.toLowerCase(),
+                    id: element.id || null,
+                    classes: Array.from(element.classList).join(' ') || null,
+                    type: 'text'
+                };
+
+                // Récupérer le texte si présent
+                if (element.textContent && element.textContent.trim()) {
+                    info.content = element.textContent.trim();
+                }
+
+                // Récupérer les attributs spécifiques pour les images
+                if (element.tagName.toLowerCase() === 'img') {
+                    info.type = 'image';
+                    info.content = {
+                        src: element.src || null,
+                        alt: element.alt || null,
+                        width: element.width || null,
+                        height: element.height || null
+                    };
+                }
+
+                // Récupérer les attributs pour les liens
+                if (element.tagName.toLowerCase() === 'a') {
+                    info.type = 'link';
+                    info.href = element.href || null;
+                }
+
+                // Récupérer les meta descriptions
+                if (element.tagName.toLowerCase() === 'meta') {
+                    info.type = 'meta';
+                    info.name = element.getAttribute('name') || null;
+                    info.property = element.getAttribute('property') || null;
+                    info.content = element.getAttribute('content') || null;
+                }
+
+                return info;
+            }
+
+            // Sélectionner tous les éléments pertinents
+            const relevantTags = [
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6',  // Titres
+                'p', 'span',                   // Texte
+                'img', 'figure',                      // Images
+                'a',                                  // Liens
+                'ul', 'li',                          // Listes
+            ];
+
+            const elements = [];
+
+            // Fonction pour extraire les éléments et leurs enfants
+            function extractElements(element, depth = 0) {
+                if (!element) return;
+
+                // Vérifier si l'élément est du type qu'on recherche
+                if (relevantTags.includes(element.tagName.toLowerCase())) {
+                    const elementInfo = getElementInfo(element);
+
+                    // Filtrer le contenu non pertinent
+                    if (elementInfo.content &&
+                        typeof elementInfo.content === 'string' &&
+                        !elementInfo.content.includes('Instagram') &&
+                        !elementInfo.content.includes('JavaScript') &&
+                        elementInfo.content.length > 1) {
+
+                        elementInfo.depth = depth;
+                        elements.push(elementInfo);
+                    }
+                }
+
+                // Récursion sur les enfants
+                if (element.children) {
+                    Array.from(element.children).forEach(child => {
+                        extractElements(child, depth + 1);
+                    });
+                }
+            }
+
+            // Commencer l'extraction depuis le body
+            document.body && extractElements(document.body);
+
+            // Extraire spécifiquement les meta tags de la head
+            const metaTags = document.head.querySelectorAll('meta');
+            metaTags.forEach(meta => {
+                const metaInfo = getElementInfo(meta);
+                if (metaInfo.content) {
+                    elements.push(metaInfo);
+                }
+            });
+
+            return {
+                url: window.location.href,
+                timestamp: new Date().toISOString(),
+                elements: elements
+            };
+        });
+
+        return {
+            success: true,
+            data: pageContent
+        };
+
+    } catch (error) {
+        console.error("Erreur lors de la récupération du texte Instagram:", error.message);
+        return {
+            success: false,
+            error: "Erreur lors de la récupération du texte Instagram",
+            details: error.message
+        };
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}
+
+async function validatePhoneNumber(phone) {
+    const apiKey = process.env.NUMVERIFY_API_KEY || '9856614c68c02687d34bad57461d0ace';
+    const normalizedPhone = phone.replace(/[\s-]/g, '');
+
+    try {
+        const response = await axios.get('http://apilayer.net/api/validate', {
+            params: {
+                access_key: apiKey,
+                number: normalizedPhone,
+                country_code: 'FR',
+                format: 1
+            }
+        });
+
+        if (response.data && response.data.valid) {
+            return {
+                valid: response.data.valid,
+                number: response.data.number,
+                localFormat: response.data.local_format,
+                internationalFormat: response.data.international_format,
+                countryPrefix: response.data.country_prefix,
+                countryCode: response.data.country_code,
+                countryName: response.data.country_name,
+                location: response.data.location,
+                carrier: response.data.carrier,
+                lineType: response.data.line_type
+            };
+        } else {
+            return {
+                valid: false,
+                error: "Numéro invalide",
+                rawResponse: response.data
+            };
+        }
+    } catch (error) {
+        console.error("Erreur lors de la validation du numéro:", error.message);
+        return {
+            valid: false,
+            error: error.message,
+            details: "Erreur lors de la validation du numéro de téléphone"
+        };
+    }
+}
+
+async function gatherOSINTData(firstName, lastName, phone, email, instagramUsername) {
+    const osintData = {
+        basicInfo: {
+            firstName,
+            lastName,
+            phone,
+            email,
+            instagramUsername
+        }
+    };
+
+    if (email) {
+        try {
+            const emailResponse = await axios.get(`https://api.hunter.io/v2/email-verifier`, {
+                params: { email, api_key: process.env.HUNTER_API_KEY }
+            });
+            osintData.emailVerification = emailResponse.data.data;
+        } catch (error) {
+            console.error("Erreur lors de la recherche avec Hunter.io:", error.message);
+            osintData.emailVerification = {
+                error: "Erreur lors de la vérification de l'email",
+                details: error.message
+            };
+        }
+    }
+
+    if (phone) {
+        try {
+            const phoneData = await validatePhoneNumber(phone);
+            osintData.phoneVerification = phoneData;
+        } catch (error) {
+            console.error("Erreur lors de la recherche avec l'API de téléphone:", error.message);
+            osintData.phoneVerification = {
+                error: "Erreur lors de la vérification du numéro de téléphone",
+                details: error.message
+            };
+        }
+    }
+
+    if (instagramUsername) {
+        try {
+            const instaData = await getInstagramText(instagramUsername);
+            osintData.instagramInfo = instaData;
+        } catch (error) {
+            console.error("Erreur lors de la récupération des données Instagram:", error.message);
+            osintData.instagramInfo = {
+                error: "Erreur lors de la récupération des données Instagram",
+                details: error.message
+            };
+        }
+    }
+
+    return osintData;
+}
+
+router.post('/osint', auth, (req, res, next) => {
+    if (req.user.role === 'admin') {
+        return next();
+    }
+    return permissionCheck('osint')(req, res, next) || permissionCheck('crawler')(req, res, next);
+}, async (req, res) => {
+    const { firstName, lastName, phone, email, instagramUsername } = req.body;
+
+    if (!firstName && !lastName && !phone && !email && !instagramUsername) {
+        return res.status(400).json({
+            msg: 'Au moins un des champs (firstName, lastName, phone, email, ou instagramUsername) est requis'
+        });
+    }
+
+    try {
+        const osintData = await gatherOSINTData(firstName, lastName, phone, email, instagramUsername);
+
+        const baseTemplatePath = path.join(__dirname, '../osint/index.html');
+        let baseTemplate = fs.readFileSync(baseTemplatePath, 'utf-8');
+
+        const prompt = `
+    Informations de base fournies :
+    - Prénom : ${firstName || "non fourni"}
+    - Nom : ${lastName || "non fourni"}
+    - Téléphone : ${phone || "non fourni"}
+    - Email : ${email || "non fourni"}
+
+    Données collectées sur la personne :
+    - Vérification email avec Hunter.io : ${JSON.stringify(osintData.emailVerification || {}, null, 2)}
+    - Vérification téléphone avec Numverify : ${JSON.stringify(osintData.phoneVerification || {}, null, 2)}
+    - Données Instagram structurées : ${JSON.stringify(osintData.instagramInfo || {}, null, 2)}
+
+    Modèle HTML à utiliser :
+    \`\`\`html
+    ${baseTemplate}
+    \`\`\`
+
+    Générez une page HTML professionnelle qui présente la personne de manière claire et organisée. 
+    Analysez particulièrement les éléments de données collectés et mettez en évidence chaque détails (famille, amis, collègues, emploi, éducation, localisation, passions, liens vers des personnes proches/collègues, liens vers des pages qui pourraient apporter plus d'infos, etc.).
+
+    Si la personne est une personnalité publique que tu connais, ajoute des informations supplémentaires pertinentes.
+
+    Mettez en valeur toutes les informations, même les petits détails qui concernent la personne.
+
+    Quand il y a des photos, publications.. fais en sorte qu'elles soient visibles sur la page.
+
+    Si les données contiennent des posts, assurez-vous qu'ils sont bien formatés et faciles à lire, avec image, descriptions.. etc.
+
+    Fais en sorte que les liens ne soient pas en bleus, uniquement du texte souligné et cliquable.
+
+    Vous pouvez créer des sections supplémentaires.
+    Si tu trouves des sites ou données qui seraient intéressants de consulter pour obtenir plus d'infos, précise les.
+    Il faut toujours citer les sources, mais n'inclus pas les liens qui n'ont pas de rapport avec les données personnelles de la personne. Par exemple des conditions d'utilisations, cookies etc, ça ne doit pas être inclus.
+    La page doit être prête pour un affichage immédiat, sans commentaires ni explications. Tu dois me renvoyer uniquement le code HTML final.
+`;
+        console.log(prompt);
+
+        const responseAI = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [{ role: 'user', content: prompt }],
+        });
+
+        let gptResponse = responseAI.choices[0].message.content;
+
+        if (gptResponse.startsWith("```html") && gptResponse.endsWith("```")) {
+            gptResponse = gptResponse.slice(7, -3).trim();
+        } else if (gptResponse.startsWith("```") && gptResponse.endsWith("```")) {
+            gptResponse = gptResponse.slice(3, -3).trim();
+        }
+
+        const generatedFilePath = path.join(__dirname, '../generated/osint/index.html');
+        if (!fs.existsSync(path.dirname(generatedFilePath))) {
+            fs.mkdirSync(path.dirname(generatedFilePath), { recursive: true });
+        }
+
+        fs.writeFileSync(generatedFilePath, gptResponse);
+
+        res.status(200).json({
+            link: `http://localhost:5000/generated/osint/index.html`,
+            data: osintData
+        });
+    } catch (error) {
+        res.status(500).json({
+            msg: 'Erreur lors de la génération de la page OSINT',
+            error: error.message
+        });
+    }
+});
 
 module.exports = router;

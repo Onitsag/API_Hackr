@@ -20,6 +20,9 @@ app.use(express.json());
 // Servir statiquement le dossier 'generated'
 app.use('/generated', express.static(path.join(__dirname, 'generated')));
 
+// Servir statiquement le dossier 'osint'
+app.use('/osint', express.static(path.join(__dirname, 'osint')));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/features', featureRoutes);
