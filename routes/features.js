@@ -374,7 +374,7 @@ Voici le code HTML de mon site web :
 ${referenceContent}
 \`\`\`
 
-Je souhaite que vous modifiiez le formulaire de connexion de ce site pour qu'il fasse ce qui suit lorsque le bouton de validation est cliqué :
+Je souhaite que vous modifiez le formulaire de connexion de ce site pour qu'il fasse ce qui suit lorsque le bouton de validation est cliqué :
 1. Affichez via console.log() le login et le mot de passe précisés dans le formulaire.
 2. Enregistrez le login et le mot de passe en envoyant une requête POST à "http://localhost:5000/api/features/save-identifiants" avec les données "login" et "password".
 3. Assurez-vous que le formulaire ne redirige pas et ne soumette pas les informations via une action standard. **Retirez ou désactivez l’attribut \`action\` du formulaire** pour empêcher toute redirection par défaut.
@@ -736,6 +736,22 @@ async function gatherOSINTData(firstName, lastName, phone, email, instagramUsern
 
     return osintData;
 }
+
+// Étape pour OSINT
+// Fournir les informations de base (prénom, nom, téléphone, email, nom d'utilisateur Instagram/linkedin...) en fonction des données qu'on a déjà
+//
+// En partant du prénom/nom : essayer de trouver le insta, linkedin de la personne
+// En partant du téléphone : faire une recherche inversée pour trouver le nom de la personne depuis un annuaire inversé
+// En partant de l'email : vérifier si l'email est valide, et si possible trouver le nom de la personne associée grâce à une IA
+// fouiller aussi les réseaux sociaux associés à l'email pour trouver des infos supplémentaires (nom, prénom, téléphone, etc.)
+// En partant de l'username Instagram : récupérer le texte de la page Instagram pour trouver des infos sur la personne
+// récupérer la photo de profile et faire une recherche inversée pour trouver d'autres comptes associés
+// (si profil public) récupérer les posts et les analyser pour trouver des infos supplémentaires grâce à une IA, ou en les lisant le lieux, les personnes taguées, etc.
+// En partant de l'username Linkedin : récupérer le texte de la page Linkedin pour trouver des infos sur la personne
+// récupérer la photo de profile et faire une recherche inversée pour trouver d'autres comptes associés
+//
+// Réunir toutes les informations dans un JSON structuré
+// Créer un prompt pour demander à une IA de générer une page HTML professionnelle qui présente la personne de manière claire et organisée grâce au JSON structuré
 
 router.post('/osint', auth, (req, res, next) => {
     if (req.user.role === 'admin') {
