@@ -490,151 +490,118 @@ router.post('/save-identifiants', async (req, res) => {
 });
 
 
-
-// Fonction pour récupérer le texte d'Instagram
-async function getInstagramText(username) {
+async function getWebsiteData(url, nomDeLimageAGenerer) {
     let browser;
     try {
         browser = await puppeteer.launch({
-            headless: "new",
+            headless: true,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--disable-infobars',
-                '--window-position=0,0',
-                '--ignore-certifcate-errors',
-                '--ignore-certifcate-errors-spki-list'
             ]
         });
 
         const page = await browser.newPage();
 
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
-        await page.goto(`https://www.instagram.com/${username}/`, {
-            waitUntil: 'networkidle0',
-            timeout: 30000
+        // Désactiver le CSS mais laisser la structure HTML visible
+        await page.evaluate(() => {
+            const styleSheets = document.styleSheets;
+            for (let i = 0; i < styleSheets.length; i++) {
+                try {
+                    styleSheets[i].disabled = true;
+                } catch (e) {
+                    console.warn('Unable to disable stylesheet:', e);
+                }
+            }
         });
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Créer le dossier si nécessaire
+        const screenshotDir = path.join(__dirname, '../generated/osint/data');
+        if (!fs.existsSync(screenshotDir)) {
+            fs.mkdirSync(screenshotDir, { recursive: true });
+        }
 
-        // Extraire les informations détaillées de chaque élément
-        const pageContent = await page.evaluate(() => {
-            function getElementInfo(element) {
-                const info = {
-                    tagName: element.tagName.toLowerCase(),
-                    id: element.id || null,
-                    classes: Array.from(element.classList).join(' ') || null,
-                    type: 'text'
-                };
+        const screenshotPath = path.join(screenshotDir, nomDeLimageAGenerer);
+        await page.screenshot({ path: screenshotPath, fullPage: true, type: 'png' });
 
-                // Récupérer le texte si présent
-                if (element.textContent && element.textContent.trim()) {
-                    info.content = element.textContent.trim();
-                }
+        // Lire le fichier de l'image et l'encoder en base64
+        const base64Image = fs.readFileSync(screenshotPath, { encoding: 'base64' });
+        const dataUrl = `data:image/png;base64,${base64Image}`;
 
-                // Récupérer les attributs spécifiques pour les images
-                if (element.tagName.toLowerCase() === 'img') {
-                    info.type = 'image';
-                    info.content = {
-                        src: element.src || null,
-                        alt: element.alt || null,
-                        width: element.width || null,
-                        height: element.height || null
-                    };
-                }
+        // Préparer la requête à l'API OpenAI avec l'image encodée en base64
+        const responseAI = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [
+                {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: `Voici une image d'un site où j'ai probablement marqué des infos sur moi. Rédige un code JSON pour récapituler mes infos perso (prénom, etc) présentent sur le screen pour me rappeler tout ce que j'ai mis dessus. N'invente aucune information. Ta réponse contiendra uniquement un JSON valide, sans explication ou commentaire supplémentaire. Ne mets pas le JSON dans des balises de code.`
+                        },
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: dataUrl
+                            }
+                        }
+                    ],
+                },
+            ],
+        });
 
-                // Récupérer les attributs pour les liens
-                if (element.tagName.toLowerCase() === 'a') {
-                    info.type = 'link';
-                    info.href = element.href || null;
-                }
+        let gptResponse = responseAI.choices[0].message.content;
+        console.log("Réponse GPT IMAGE :", gptResponse);
 
-                // Récupérer les meta descriptions
-                if (element.tagName.toLowerCase() === 'meta') {
-                    info.type = 'meta';
-                    info.name = element.getAttribute('name') || null;
-                    info.property = element.getAttribute('property') || null;
-                    info.content = element.getAttribute('content') || null;
-                }
+        // Nettoyer la réponse pour extraire le JSON
+        gptResponse = extractJSON(gptResponse);
 
-                return info;
-            }
-
-            // Sélectionner tous les éléments pertinents
-            const relevantTags = [
-                'h1', 'h2', 'h3', 'h4', 'h5', 'h6',  // Titres
-                'p', 'span',                   // Texte
-                'img', 'figure',                      // Images
-                'a',                                  // Liens
-                'ul', 'li',                          // Listes
-            ];
-
-            const elements = [];
-
-            // Fonction pour extraire les éléments et leurs enfants
-            function extractElements(element, depth = 0) {
-                if (!element) return;
-
-                // Vérifier si l'élément est du type qu'on recherche
-                if (relevantTags.includes(element.tagName.toLowerCase())) {
-                    const elementInfo = getElementInfo(element);
-
-                    // Filtrer le contenu non pertinent
-                    if (elementInfo.content &&
-                        typeof elementInfo.content === 'string' &&
-                        !elementInfo.content.includes('Instagram') &&
-                        !elementInfo.content.includes('JavaScript') &&
-                        elementInfo.content.length > 1) {
-
-                        elementInfo.depth = depth;
-                        elements.push(elementInfo);
-                    }
-                }
-
-                // Récursion sur les enfants
-                if (element.children) {
-                    Array.from(element.children).forEach(child => {
-                        extractElements(child, depth + 1);
-                    });
-                }
-            }
-
-            // Commencer l'extraction depuis le body
-            document.body && extractElements(document.body);
-
-            // Extraire spécifiquement les meta tags de la head
-            const metaTags = document.head.querySelectorAll('meta');
-            metaTags.forEach(meta => {
-                const metaInfo = getElementInfo(meta);
-                if (metaInfo.content) {
-                    elements.push(metaInfo);
-                }
-            });
-
+        // S'assurer que la réponse est bien un JSON valide
+        let websiteData;
+        try {
+            websiteData = JSON.parse(gptResponse);
+        } catch (parseError) {
+            console.error("Erreur lors du parsing du JSON:", parseError.message);
+            console.error("Réponse GPT :", gptResponse);
             return {
-                url: window.location.href,
-                timestamp: new Date().toISOString(),
-                elements: elements
+                success: false,
+                error: "Erreur lors du parsing du JSON",
+                details: parseError.message
             };
-        });
+        }
 
         return {
             success: true,
-            data: pageContent
+            data: websiteData
         };
 
     } catch (error) {
-        console.error("Erreur lors de la récupération du texte Instagram:", error.message);
+        console.error("Erreur lors de la récupération des données du site:", error.message);
         return {
             success: false,
-            error: "Erreur lors de la récupération du texte Instagram",
+            error: "Erreur lors de la récupération des données du site",
             details: error.message
         };
     } finally {
         if (browser) {
             await browser.close();
         }
+    }
+}
+
+function extractJSON(response) {
+    // Rechercher le premier et le dernier index des accolades
+    const firstBrace = response.indexOf('{');
+    const lastBrace = response.lastIndexOf('}');
+
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        return response.substring(firstBrace, lastBrace + 1);
+    } else {
+        // Si aucune accolade n'est trouvée, retourner la réponse telle quelle
+        return response;
     }
 }
 
@@ -682,14 +649,14 @@ async function validatePhoneNumber(phone) {
     }
 }
 
-async function gatherOSINTData(firstName, lastName, phone, email, instagramUsername) {
+async function gatherOSINTData(firstName, lastName, phone, email, username) {
     const osintData = {
         basicInfo: {
             firstName,
             lastName,
             phone,
             email,
-            instagramUsername
+            username
         }
     };
 
@@ -721,10 +688,10 @@ async function gatherOSINTData(firstName, lastName, phone, email, instagramUsern
         }
     }
 
-    if (instagramUsername) {
+    if (username) {
         try {
-            const instaData = await getInstagramText(instagramUsername);
-            osintData.instagramInfo = instaData;
+            const instaData = await getWebsiteData("https://www.instagram.com/" + username, "instagram.png");
+            osintData.instagramInfo = instaData.data; // Extraire les données
         } catch (error) {
             console.error("Erreur lors de la récupération des données Instagram:", error.message);
             osintData.instagramInfo = {
@@ -732,7 +699,7 @@ async function gatherOSINTData(firstName, lastName, phone, email, instagramUsern
                 details: error.message
             };
         }
-    }
+    }    
 
     return osintData;
 }
@@ -759,16 +726,16 @@ router.post('/osint', auth, (req, res, next) => {
     }
     return permissionCheck('osint')(req, res, next) || permissionCheck('crawler')(req, res, next);
 }, async (req, res) => {
-    const { firstName, lastName, phone, email, instagramUsername } = req.body;
+    const { firstName, lastName, phone, email, username } = req.body;
 
-    if (!firstName && !lastName && !phone && !email && !instagramUsername) {
+    if (!firstName && !lastName && !phone && !email && !username) {
         return res.status(400).json({
-            msg: 'Au moins un des champs (firstName, lastName, phone, email, ou instagramUsername) est requis'
+            msg: 'Au moins un des champs (firstName, lastName, phone, email, ou username) est requis'
         });
     }
 
     try {
-        const osintData = await gatherOSINTData(firstName, lastName, phone, email, instagramUsername);
+        const osintData = await gatherOSINTData(firstName, lastName, phone, email, username);
 
         const baseTemplatePath = path.join(__dirname, '../osint/index.html');
         let baseTemplate = fs.readFileSync(baseTemplatePath, 'utf-8');
@@ -780,10 +747,10 @@ router.post('/osint', auth, (req, res, next) => {
     - Téléphone : ${phone || "non fourni"}
     - Email : ${email || "non fourni"}
 
-    Données collectées sur la personne :
-    - Vérification email avec Hunter.io : ${JSON.stringify(osintData.emailVerification || {}, null, 2)}
-    - Vérification téléphone avec Numverify : ${JSON.stringify(osintData.phoneVerification || {}, null, 2)}
-    - Données Instagram structurées : ${JSON.stringify(osintData.instagramInfo || {}, null, 2)}
+    Données collectées :
+    - Vérification email : ${JSON.stringify(osintData.emailVerification || {}, null, 2)}
+    - Vérification téléphone : ${JSON.stringify(osintData.phoneVerification || {}, null, 2)}
+    - Données Instagram : ${JSON.stringify(osintData.instagramInfo || {}, null, 2)}
 
     Modèle HTML à utiliser :
     \`\`\`html
