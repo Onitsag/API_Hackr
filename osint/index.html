@@ -1,96 +1,445 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OSINT Report</title>
+    <title>Rapport OSINT</title>
+    <!-- Font Awesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      integrity="sha512-p6N1+2R7bzE2kV5qGb3xOgl5H8P+n8IRjD0V0Y6JbO4nM8e7KvK7vR1GqvZ8HbyLxkM0Sx48VBY1ERqM1JkNIA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <style>
+        /* Reset CSS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Variables de couleurs */
+        :root {
+            --background-color: #0d0d0d;
+            --primary-color: #00ff7f;
+            --secondary-color: #1e1e1e;
+            --text-color: #c7c7c7;
+            --accent-color: #ff0040;
+            --border-color: #00ff7f;
+            --font-family: 'Courier New', Courier, monospace;
+            --transition-speed: 0.3s;
+        }
+
         body {
-            background-color: #121212;
-            color: #00ff00;
-            font-family: monospace;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            line-height: 1.6;
+            padding: 20px;
         }
+
         h1, h2 {
-            color: #00ff00;
-            border-bottom: 1px solid #00ff00;
-            padding-bottom: 5px;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            position: relative;
         }
+
+        h1::after, h2::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -5px;
+            width: 50px;
+            height: 2px;
+            background-color: var(--primary-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
         .info-section {
-            margin: 20px 0;
-            padding: 10px;
-            border: 1px solid #00ff00;
-            border-radius: 5px;
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+            transition: transform var(--transition-speed), box-shadow var(--transition-speed);
         }
+
+        .info-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px rgba(0, 255, 127, 0.4);
+        }
+
         .info-title {
-            font-weight: bold;
-            color: #00ff00;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
         }
+
+        .info-title i {
+            margin-right: 10px;
+            font-size: 1.2em;
+            color: var(--primary-color);
+        }
+
         .info-content {
-            margin-left: 15px;
-            color: #d1ffd1;
+            padding-left: 15px;
+            color: var(--text-color);
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--secondary-color);
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+            z-index: 1000; /* Assure que la navbar reste au-dessus */
+            max-width: 220px;
+        }
+
+        nav a {
+            display: flex;
+            align-items: center;
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-bottom: 10px;
+            transition: color var(--transition-speed);
+            font-size: 0.95em;
+        }
+
+        nav a i {
+            margin-right: 10px;
+            font-size: 1.1em;
+            width: 20px;
+            text-align: center;
+        }
+
+        nav a:hover {
+            color: var(--accent-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                position: static;
+                margin-bottom: 20px;
+                max-width: 100%;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scroll behavior */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--secondary-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        /* Button Style */
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color var(--transition-speed);
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-color);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--text-color);
+            font-size: 0.8em;
+        }
+
+        /* Dark Mode Toggle */
+        .dark-mode-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+            transition: background-color var(--transition-speed), transform var(--transition-speed);
+        }
+
+        .dark-mode-toggle:hover {
+            transform: rotate(90deg);
+            background-color: var(--accent-color);
+        }
+
+        /* Light Mode Styles */
+        body.light-mode {
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        body.light-mode .info-section {
+            background-color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+        }
+
+        body.light-mode nav {
+            background-color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+        }
+
+        body.light-mode nav a {
+            color: var(--primary-color);
+        }
+
+        body.light-mode nav a:hover {
+            color: var(--accent-color);
+        }
+
+        body.light-mode .info-content {
+            color: #333;
+        }
+
+        body.light-mode ::-webkit-scrollbar-track {
+            background: #f4f4f4;
+        }
+
+        body.light-mode ::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+        }
+
+        body.light-mode .btn {
+            background-color: #00ff7f;
+            color: #0d0d0d;
+        }
+
+        body.light-mode .btn:hover {
+            background-color: var(--accent-color);
+        }
+
+        body.light-mode .dark-mode-toggle {
+            background-color: #fff;
+            border-color: var(--primary-color);
+        }
+
+        body.light-mode .dark-mode-toggle:hover {
+            background-color: var(--accent-color);
+        }
+
+        body.light-mode .info-title i {
+            color: var(--primary-color);
         }
     </style>
 </head>
 <body>
-    <h1>OSINT Report for <span id="target-name"></span></h1>
-    
-    <div class="info-section" id="personal-info">
-        <h2>Personal Information</h2>
-        <div class="info-content" id="personal-content">
-            <!-- Personal info will be here -->
-        </div>
+    <!-- Bouton Toggle Dark Mode -->
+    <div class="dark-mode-toggle" id="dark-mode-toggle" title="Basculer le Mode Sombre">
+        <i class="fas fa-moon"></i>
     </div>
 
-    <div class="info-section" id="location-info">
-        <h2>Location</h2>
-        <div class="info-content" id="location-content">
-            <!-- Location info will be here -->
+    <!-- Navigation -->
+    <nav>
+        <a href="#personal-info"><i class="fas fa-user"></i> Informations Personnelles</a>
+        <a href="#location-info"><i class="fas fa-map-marker-alt"></i> Localisation</a>
+        <a href="#insta-info"><i class="fab fa-instagram"></i> Instagram</a>
+        <a href="#twitter-info"><i class="fab fa-twitter"></i> Twitter</a>
+        <a href="#familly-friends-info"><i class="fas fa-users"></i> Famille & Amis</a>
+        <a href="#education-info"><i class="fas fa-graduation-cap"></i> Éducation</a>
+        <a href="#jobs-info"><i class="fas fa-briefcase"></i> Emplois</a>
+        <a href="#personal-project-info"><i class="fas fa-tools"></i> Projets Personnels</a>
+        <a href="#professional-project-info"><i class="fas fa-cogs"></i> Projets Professionnels</a>
+        <a href="#social-info"><i class="fas fa-globe"></i> Réseaux Sociaux & Intérêts</a>
+        <a href="#accounts-info"><i class="fas fa-link"></i> Comptes Connexes</a>
+    </nav>
+
+    <!-- Contenu Principal -->
+    <div class="container">
+        <h1 class="fade-in">Rapport OSINT pour <span id="target-name">[Nom Cible]</span></h1>
+        
+        <div class="info-section fade-in" id="personal-info">
+            <h2 class="info-title"><i class="fas fa-user"></i> Informations Personnelles</h2>
+            <div class="info-content" id="personal-content">
+                <!-- Informations personnelles ici -->
+                <p><strong>Nom :</strong> John Doe</p>
+                <p><strong>Date de Naissance :</strong> 01/01/1990</p>
+                <p><strong>Email :</strong> johndoe@example.com</p>
+            </div>
         </div>
+
+        <div class="info-section fade-in" id="location-info">
+            <h2 class="info-title"><i class="fas fa-map-marker-alt"></i> Localisation</h2>
+            <div class="info-content" id="location-content">
+                <!-- Informations de localisation ici -->
+                <p><strong>Ville :</strong> Paris</p>
+                <p><strong>Pays :</strong> France</p>
+                <p><strong>Adresse :</strong> 123 Rue Exemple, 75000 Paris</p>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="insta-info">
+            <h2 class="info-title"><i class="fab fa-instagram"></i> Instagram</h2>
+            <div class="info-content" id="insta-content">
+                <!-- Informations Instagram ici -->
+                <p><strong>Username :</strong> @johndoe</p>
+                <p><strong>Followers :</strong> 10k</p>
+                <p><strong>Bio :</strong> Passionné de technologie et de hacking.</p>
+                <a href="https://instagram.com/johndoe" class="btn" target="_blank">Voir Profil</a>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="twitter-info">
+            <h2 class="info-title"><i class="fab fa-twitter"></i> Twitter</h2>
+            <div class="info-content" id="twitter-content">
+                <!-- Informations Twitter ici -->
+                <p><strong>Username :</strong> @johndoe</p>
+                <p><strong>Followers :</strong> 8k</p>
+                <p><strong>Bio :</strong> Analyste OSINT et passionné de cybersécurité.</p>
+                <a href="https://twitter.com/johndoe" class="btn" target="_blank">Voir Profil</a>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="familly-friends-info">
+            <h2 class="info-title"><i class="fas fa-users"></i> Famille, Amis & Collègues</h2>
+            <div class="info-content" id="familly-friends-content">
+                <!-- Informations sur la famille, amis et collègues ici -->
+                <p><strong>Époux(se) :</strong> Jane Doe</p>
+                <p><strong>Amis :</strong> Alice, Bob, Charlie</p>
+                <p><strong>Collègues :</strong> Team OSINT</p>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="education-info">
+            <h2 class="info-title"><i class="fas fa-graduation-cap"></i> Éducation & École</h2>
+            <div class="info-content" id="education-content">
+                <!-- Informations éducatives ici -->
+                <p><strong>Université :</strong> Université de Paris</p>
+                <p><strong>Diplôme :</strong> Master en Cybersécurité</p>
+                <p><strong>Année de Graduation :</strong> 2015</p>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="jobs-info">
+            <h2 class="info-title"><i class="fas fa-briefcase"></i> Emplois</h2>
+            <div class="info-content" id="jobs-content">
+                <!-- Informations sur les emplois ici -->
+                <p><strong>Entreprise :</strong> CyberSec Inc.</p>
+                <p><strong>Poste :</strong> Analyste OSINT</p>
+                <p><strong>Période :</strong> 2016 - Présent</p>
+                <a href="https://cybersec.example.com" class="btn" target="_blank">Site de l'Entreprise</a>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="personal-project-info">
+            <h2 class="info-title"><i class="fas fa-tools"></i> Projets Personnels</h2>
+            <div class="info-content" id="personal-project-content">
+                <!-- Informations sur les projets personnels ici -->
+                <p><strong>Projet :</strong> OpenData Analyzer</p>
+                <p><strong>Description :</strong> Outil d'analyse de données open-source pour la collecte d'informations.</p>
+                <a href="https://github.com/johndoe/opendata-analyzer" class="btn" target="_blank">Voir Projet</a>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="professional-project-info">
+            <h2 class="info-title"><i class="fas fa-cogs"></i> Projets Professionnels</h2>
+            <div class="info-content" id="professional-project-content">
+                <!-- Informations sur les projets professionnels ici -->
+                <p><strong>Projet :</strong> SecureNet</p>
+                <p><strong>Description :</strong> Développement d'un réseau sécurisé pour la collecte et l'analyse OSINT.</p>
+                <a href="https://securenet.example.com" class="btn" target="_blank">Voir Projet</a>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="social-info">
+            <h2 class="info-title"><i class="fas fa-globe"></i> Réseaux Sociaux & Intérêts</h2>
+            <div class="info-content" id="social-content">
+                <!-- Informations sur les réseaux sociaux et intérêts ici -->
+                <p><strong>Plateformes :</strong> Reddit, GitHub, LinkedIn</p>
+                <p><strong>Intérêts :</strong> Cybersécurité, Programmation, Analyse de données</p>
+                <a href="https://linkedin.com/in/johndoe" class="btn" target="_blank">Voir LinkedIn</a>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="accounts-info">
+            <h2 class="info-title"><i class="fas fa-link"></i> Comptes Connexes</h2>
+            <div class="info-content" id="accounts-content">
+                <!-- Autres comptes liés à la personne ciblée ici -->
+                <p><strong>Compte GitHub :</strong> <a href="https://github.com/johndoe" target="_blank">@johndoe</a></p>
+                <p><strong>Compte LinkedIn :</strong> <a href="https://linkedin.com/in/johndoe" target="_blank">John Doe</a></p>
+                <p><strong>Compte Facebook :</strong> <a href="https://facebook.com/johndoe" target="_blank">John Doe</a></p>
+            </div>
+        </div>
+
+        <!-- Vous pouvez ajouter d'autres sections ici -->
+
     </div>
 
-    <div class="info-section" id="location-info">
-        <h2>Instagram</h2>
-        <div class="info-content" id="location-content">
-            <!-- Instagram info will be here -->
-        </div>
-    </div>
+    <!-- Footer -->
+    <footer>
+        &copy; 2024 Rapport OSINT. Tous droits réservés.
+    </footer>
 
-    <div class="info-section" id="location-info">
-        <h2>Twitter</h2>
-        <div class="info-content" id="location-content">
-            <!-- Twitter info will be here -->
-        </div>
-    </div>
+    <script>
+        // Script pour remplir dynamiquement le nom cible (optionnel)
+        document.addEventListener('DOMContentLoaded', () => {
+            const targetName = "John Doe"; // Vous pouvez remplacer cela dynamiquement
+            document.getElementById('target-name').textContent = targetName;
 
-    <div class="info-section" id="education-info">
-        <h2>Familly, Friends & Colleagues</h2>
-        <div class="info-content" id="education-content">
-            <!-- Familly, Friends & Colleagues will be here -->
-        </div>
-    </div>
-
-    <div class="info-section" id="education-info">
-        <h2>Education & Work</h2>
-        <div class="info-content" id="education-content">
-            <!-- Education and work info will be here -->
-        </div>
-    </div>
-
-    <div class="info-section" id="social-info">
-        <h2>Social Media & Interests</h2>
-        <div class="info-content" id="social-content">
-            <!-- Social media and interests will be here -->
-        </div>
-    </div>
-
-    <div class="info-section" id="social-info">
-        <h2>Related accounts</h2>
-        <div class="info-content" id="social-content">
-            <!-- Other persons related to the focused person will be here -->
-        </div>
-    </div>
-
-    <!-- Etc... -->
-
+            // Dark Mode Toggle
+            const toggleButton = document.getElementById('dark-mode-toggle');
+            toggleButton.addEventListener('click', () => {
+                document.body.classList.toggle('light-mode');
+                // Changer l'icône en fonction du mode
+                if (document.body.classList.contains('light-mode')) {
+                    toggleButton.innerHTML = '<i class="fas fa-sun"></i>';
+                } else {
+                    toggleButton.innerHTML = '<i class="fas fa-moon"></i>';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

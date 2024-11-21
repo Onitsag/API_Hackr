@@ -10,6 +10,7 @@ const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
+const { getJson } = require("serpapi");
 
 const router = express.Router(); // Initialiser le router
 
@@ -17,6 +18,40 @@ const router = express.Router(); // Initialiser le router
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
+
+
+/**
+ * Fonction pour supprimer toutes les images dans un dossier
+ */
+function cleanScreenshotsDirectory() {
+    const screenshotDir = path.join(__dirname, '../generated/osint/screenshots');
+
+    if (fs.existsSync(screenshotDir)) {
+        fs.readdir(screenshotDir, (err, files) => {
+            if (err) {
+                console.error(`Erreur lors de la lecture du dossier ${screenshotDir}:`, err.message);
+                return;
+            }
+
+            files.forEach(file => {
+                const filePath = path.join(screenshotDir, file);
+                fs.unlink(filePath, (err) => {
+                    if (err) {
+                        console.error(`Erreur lors de la suppression du fichier ${filePath}:`, err.message);
+                    } else {
+                        console.log(`Fichier ${filePath} supprimé avec succès.`);
+                    }
+                });
+            });
+        });
+    } else {
+        console.log(`Le dossier ${screenshotDir} n'existe pas. Aucun fichier à supprimer.`);
+    }
+}
+
+// Appeler la fonction de nettoyage au démarrage du module
+cleanScreenshotsDirectory();
+
 
 /**
  * @swagger
@@ -490,117 +525,13 @@ router.post('/save-identifiants', async (req, res) => {
 });
 
 
-async function getWebsiteData(url, nomDeLimageAGenerer) {
-    let browser;
-    try {
-        browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-            ]
-        });
-
-        const page = await browser.newPage();
-
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        // Désactiver le CSS mais laisser la structure HTML visible
-        await page.evaluate(() => {
-            const styleSheets = document.styleSheets;
-            for (let i = 0; i < styleSheets.length; i++) {
-                try {
-                    styleSheets[i].disabled = true;
-                } catch (e) {
-                    console.warn('Unable to disable stylesheet:', e);
-                }
-            }
-        });
-
-        // Créer le dossier si nécessaire
-        const screenshotDir = path.join(__dirname, '../generated/osint/data');
-        if (!fs.existsSync(screenshotDir)) {
-            fs.mkdirSync(screenshotDir, { recursive: true });
-        }
-
-        const screenshotPath = path.join(screenshotDir, nomDeLimageAGenerer);
-        await page.screenshot({ path: screenshotPath, fullPage: true, type: 'png' });
-
-        // Lire le fichier de l'image et l'encoder en base64
-        const base64Image = fs.readFileSync(screenshotPath, { encoding: 'base64' });
-        const dataUrl = `data:image/png;base64,${base64Image}`;
-
-        // Préparer la requête à l'API OpenAI avec l'image encodée en base64
-        const responseAI = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [
-                {
-                    role: 'user',
-                    content: [
-                        {
-                            type: 'text',
-                            text: `Voici une image d'un site où j'ai probablement marqué des infos sur moi. Rédige un code JSON pour récapituler mes infos perso (prénom, etc) présentent sur le screen pour me rappeler tout ce que j'ai mis dessus. N'invente aucune information. Ta réponse contiendra uniquement un JSON valide, sans explication ou commentaire supplémentaire. Ne mets pas le JSON dans des balises de code.`
-                        },
-                        {
-                            type: 'image_url',
-                            image_url: {
-                                url: dataUrl
-                            }
-                        }
-                    ],
-                },
-            ],
-        });
-
-        let gptResponse = responseAI.choices[0].message.content;
-        console.log("Réponse GPT IMAGE :", gptResponse);
-
-        // Nettoyer la réponse pour extraire le JSON
-        gptResponse = extractJSON(gptResponse);
-
-        // S'assurer que la réponse est bien un JSON valide
-        let websiteData;
-        try {
-            websiteData = JSON.parse(gptResponse);
-        } catch (parseError) {
-            console.error("Erreur lors du parsing du JSON:", parseError.message);
-            console.error("Réponse GPT :", gptResponse);
-            return {
-                success: false,
-                error: "Erreur lors du parsing du JSON",
-                details: parseError.message
-            };
-        }
-
-        return {
-            success: true,
-            data: websiteData
-        };
-
-    } catch (error) {
-        console.error("Erreur lors de la récupération des données du site:", error.message);
-        return {
-            success: false,
-            error: "Erreur lors de la récupération des données du site",
-            details: error.message
-        };
-    } finally {
-        if (browser) {
-            await browser.close();
-        }
-    }
-}
-
 function extractJSON(response) {
-    // Rechercher le premier et le dernier index des accolades
     const firstBrace = response.indexOf('{');
     const lastBrace = response.lastIndexOf('}');
 
     if (firstBrace !== -1 && lastBrace !== -1) {
         return response.substring(firstBrace, lastBrace + 1);
     } else {
-        // Si aucune accolade n'est trouvée, retourner la réponse telle quelle
         return response;
     }
 }
@@ -660,6 +591,7 @@ async function gatherOSINTData(firstName, lastName, phone, email, username) {
         }
     };
 
+    // Vérification email via Hunter.io
     if (email) {
         try {
             const emailResponse = await axios.get(`https://api.hunter.io/v2/email-verifier`, {
@@ -667,7 +599,6 @@ async function gatherOSINTData(firstName, lastName, phone, email, username) {
             });
             osintData.emailVerification = emailResponse.data.data;
         } catch (error) {
-            console.error("Erreur lors de la recherche avec Hunter.io:", error.message);
             osintData.emailVerification = {
                 error: "Erreur lors de la vérification de l'email",
                 details: error.message
@@ -675,12 +606,12 @@ async function gatherOSINTData(firstName, lastName, phone, email, username) {
         }
     }
 
+    // Validation du numéro de téléphone
     if (phone) {
         try {
             const phoneData = await validatePhoneNumber(phone);
             osintData.phoneVerification = phoneData;
         } catch (error) {
-            console.error("Erreur lors de la recherche avec l'API de téléphone:", error.message);
             osintData.phoneVerification = {
                 error: "Erreur lors de la vérification du numéro de téléphone",
                 details: error.message
@@ -688,37 +619,324 @@ async function gatherOSINTData(firstName, lastName, phone, email, username) {
         }
     }
 
+    // Récupération des données Instagram
     if (username) {
         try {
-            const instaData = await getWebsiteData("https://www.instagram.com/" + username, "instagram.png");
-            osintData.instagramInfo = instaData.data; // Extraire les données
+            const instaData = await getWebsiteData(`https://www.instagram.com/${username}`, "instagram.png");
+            osintData.instagramInfo = instaData.data;
         } catch (error) {
-            console.error("Erreur lors de la récupération des données Instagram:", error.message);
             osintData.instagramInfo = {
                 error: "Erreur lors de la récupération des données Instagram",
                 details: error.message
             };
         }
-    }    
+    }
+
+    // Recherche via SerpApi avec le prénom et le nom
+    if (firstName && lastName) {
+        try {
+            const serpApiResponse = await new Promise((resolve, reject) => {
+                getJson(
+                    {
+                        q: `${firstName} ${lastName}`,
+                        location: "France",
+                        hl: "fr",
+                        gl: "fr",
+                        google_domain: "google.fr",
+                        api_key: process.env.SERP_API_KEY
+                    },
+                    (json) => {
+                        if (json) resolve(json);
+                        else reject(new Error("Aucune réponse de SerpApi"));
+                    }
+                );
+            });
+
+            osintData.googleSearch = serpApiResponse;
+        } catch (error) {
+            osintData.googleSearch = {
+                error: "Erreur lors de la recherche Google",
+                details: error.message
+            };
+        }
+    }
 
     return osintData;
 }
 
-// Étape pour OSINT
-// Fournir les informations de base (prénom, nom, téléphone, email, nom d'utilisateur Instagram/linkedin...) en fonction des données qu'on a déjà
-//
-// En partant du prénom/nom : essayer de trouver le insta, linkedin de la personne
-// En partant du téléphone : faire une recherche inversée pour trouver le nom de la personne depuis un annuaire inversé
-// En partant de l'email : vérifier si l'email est valide, et si possible trouver le nom de la personne associée grâce à une IA
-// fouiller aussi les réseaux sociaux associés à l'email pour trouver des infos supplémentaires (nom, prénom, téléphone, etc.)
-// En partant de l'username Instagram : récupérer le texte de la page Instagram pour trouver des infos sur la personne
-// récupérer la photo de profile et faire une recherche inversée pour trouver d'autres comptes associés
-// (si profil public) récupérer les posts et les analyser pour trouver des infos supplémentaires grâce à une IA, ou en les lisant le lieux, les personnes taguées, etc.
-// En partant de l'username Linkedin : récupérer le texte de la page Linkedin pour trouver des infos sur la personne
-// récupérer la photo de profile et faire une recherche inversée pour trouver d'autres comptes associés
-//
-// Réunir toutes les informations dans un JSON structuré
-// Créer un prompt pour demander à une IA de générer une page HTML professionnelle qui présente la personne de manière claire et organisée grâce au JSON structuré
+/**
+ * Fonction pour obtenir les sites pertinents via GPT
+ */
+async function getRelevantSitesGPT(osintData) {
+    const prompt = `
+Informations de base fournies :
+- Prénom : ${osintData.basicInfo.firstName || "non fourni"}
+- Nom : ${osintData.basicInfo.lastName || "non fourni"}
+- Téléphone : ${osintData.basicInfo.phone || "non fourni"}
+- Email : ${osintData.basicInfo.email || "non fourni"}
+
+Données collectées :
+- Vérification email : ${JSON.stringify(osintData.emailVerification || {}, null, 2)}
+- Vérification téléphone : ${JSON.stringify(osintData.phoneVerification || {}, null, 2)}
+- Données Instagram : ${JSON.stringify(osintData.instagramInfo || {}, null, 2)}
+- Données Google : ${JSON.stringify(osintData.googleSearch || {}, null, 2)}
+
+Parmi les informations trouvées, essaye de trouver des sites intéressants à consulter pour obtenir plus d'informations pertinentes sur la personne. Tu peux fournir jusqu'à 10 sites maximum qui seront automatiquement consultés pour avoir plus d'informations.
+Ton message de réponse doit être obligatoirement sous la forme :
+["https://www.site1.com", "https://www.site2.com", ..., "https://www.site10.com"]
+
+Si tu n'as aucun site à recommander, tu réponds :
+["Aucun site intéressant"]
+`;
+
+    console.log("Prompt GPT pour sites pertinents :", prompt);
+
+    const responseAI = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }]
+    });
+
+    let relevantSites;
+    try {
+        relevantSites = JSON.parse(responseAI.choices[0].message.content);
+    } catch (parseError) {
+        console.error("Erreur lors du parsing des sites pertinents :", parseError.message);
+        relevantSites = ["Aucun site intéressant"];
+    }
+
+    return relevantSites;
+}
+
+
+async function analyzeScreenshot(url, screenshotName) {
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+            ]
+        });
+
+        const page = await browser.newPage();
+
+        // Définir la taille de la fenêtre pour correspondre à un écran 1920x1080
+        await page.setViewport({
+            width: 1920,
+            height: 1080
+        });
+
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Attendre le chargement complet
+
+        // Désactiver le CSS mais laisser la structure HTML visible (optionnel)
+        // await page.evaluate(() => {
+        //     const styleSheets = document.styleSheets;
+        //     for (let i = 0; i < styleSheets.length; i++) {
+        //         try {
+        //             styleSheets[i].disabled = true;
+        //         } catch (e) {
+        //             console.warn('Unable to disable stylesheet:', e);
+        //         }
+        //     }
+        // });
+
+        // Définir les sélecteurs et les mots-clés pour les boutons de consentement
+        const consentSelectors = [
+            'button',
+            'a',
+            'div',
+            'span',
+            'input[type="button"]',
+            'input[type="submit"]',
+            // Ajoutez d'autres sélecteurs si nécessaire
+        ];
+
+        // Liste de mots-clés pertinents (insensible à la casse)
+        const consentKeywords = ['accepter', 'autoriser'];
+
+        // Utiliser page.evaluate pour trouver et cliquer sur le bouton de consentement
+        const consentClicked = await page.evaluate((selectors, keywords) => {
+            // Convertir tous les mots-clés en minuscules pour une comparaison insensible à la casse
+            const lowerKeywords = keywords.map(keyword => keyword.toLowerCase());
+
+            for (const selector of selectors) {
+                const elements = document.querySelectorAll(selector);
+                for (const element of elements) {
+                    const text = element.innerText || element.value || element.getAttribute('aria-label') || '';
+                    const lowerText = text.trim().toLowerCase();
+
+                    for (const keyword of lowerKeywords) {
+                        if (lowerText.includes(keyword)) {
+                            element.click();
+                            console.log(`Bouton trouvé avec le texte : "${text.trim()}" et cliqué.`);
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }, consentSelectors, consentKeywords);
+
+        if (consentClicked) {
+            console.log(`Bouton de consentement trouvé et cliqué sur ${url}.`);
+            await page.waitForTimeout ? await page.waitForTimeout(3000) : await new Promise(resolve => setTimeout(resolve, 3000)); // Attendre après le clic pour les changements DOM
+        } else {
+            console.log(`Aucun bouton de consentement trouvé sur ${url}.`);
+        }
+
+        // Créer le dossier si nécessaire
+        const screenshotDir = path.join(__dirname, '../generated/osint/screenshots');
+        if (!fs.existsSync(screenshotDir)) {
+            fs.mkdirSync(screenshotDir, { recursive: true });
+        }
+
+        const screenshotPath = path.join(screenshotDir, `${screenshotName}.png`);
+        await page.screenshot({ path: screenshotPath, fullPage: false, type: 'png' }); // `fullPage: false` pour ne capturer que la zone visible
+
+        // Lire le fichier de l'image et l'encoder en base64
+        const base64Image = fs.readFileSync(screenshotPath, { encoding: 'base64' });
+        const dataUrl = `data:image/png;base64,${base64Image}`;
+
+        // Préparer la requête à l'API OpenAI avec l'image encodée en base64
+        const responseAI = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [
+                {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: `Voici une image d'un site où j'ai probablement marqué des infos sur moi. Rédige un code JSON pour récapituler mes infos perso (prénom, etc) présentes sur le screen pour me rappeler tout ce que j'ai mis dessus. Je veux toutes les informations dans le moindre détail. N'invente aucune information. Ta réponse contiendra uniquement un JSON valide, sans explication ou commentaire supplémentaire. Ne mets pas le JSON dans des balises de code. Si tu n'as aucune info, crée un json vide. Si y'a des sites pertinents, précise bien leur liens dans le JSON. Affiche le maximum d'informations possibles.`
+                        },
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: dataUrl
+                            }
+                        }
+                    ],
+                },
+            ],
+        });
+
+        let gptResponse = responseAI.choices[0].message.content;
+        console.log(`Réponse GPT pour ${url} :`, gptResponse);
+
+        // Nettoyer la réponse pour extraire le JSON
+        gptResponse = extractJSON(gptResponse);
+
+        // // Supprimer le fichier screenshot après analyse
+        // fs.unlink(screenshotPath, (err) => {
+        //     if (err) {
+        //         console.error(`Erreur lors de la suppression du fichier ${screenshotPath}:`, err.message);
+        //     } else {
+        //         console.log(`Fichier ${screenshotPath} supprimé avec succès.`);
+        //     }
+        // });
+
+        // S'assurer que la réponse est bien un JSON valide
+        let websiteData;
+        try {
+            websiteData = JSON.parse(gptResponse);
+        } catch (parseError) {
+            console.error(`Erreur lors du parsing du JSON pour ${url}:`, parseError.message);
+            console.error("Réponse GPT :", gptResponse);
+            return {
+                success: false,
+                error: "Erreur lors du parsing du JSON",
+                details: parseError.message
+            };
+        }
+
+        return {
+            success: true,
+            data: websiteData
+        };
+
+    } catch (error) {
+        console.error(`analyzeScreenshot : Erreur lors de la récupération des données du site ${url}:`, error.message);
+        return {
+            success: false,
+            error: "analyzeScreenshot : Erreur lors de la récupération des données du site",
+            details: error.message
+        };
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}
+
+
+async function generateFinalHTML(osintData, baseTemplate) {
+    const prompt = `
+Informations de base fournies :
+- Prénom : ${osintData.basicInfo.firstName || "non fourni"}
+- Nom : ${osintData.basicInfo.lastName || "non fourni"}
+- Téléphone : ${osintData.basicInfo.phone || "non fourni"}
+- Email : ${osintData.basicInfo.email || "non fourni"}
+
+Données collectées :
+- Vérification email : ${JSON.stringify(osintData.emailVerification || {}, null, 2)}
+- Vérification téléphone : ${JSON.stringify(osintData.phoneVerification || {}, null, 2)}
+- Données Instagram : ${JSON.stringify(osintData.instagramInfo || {}, null, 2)}
+- Données Google (avec la recherche "Prénom Nom") : ${JSON.stringify(osintData.googleSearch || {}, null, 2)}
+- Contenu d'autres sites pertinents : ${JSON.stringify(osintData.relevantContent || {}, null, 2)}
+
+Modèle HTML à utiliser :
+\`\`\`html
+${baseTemplate}
+\`\`\`
+
+Générez une page HTML professionnelle qui présente la personne de manière claire et organisée, en français. 
+Analysez particulièrement les éléments de données collectés et mettez en évidence chaque détail (âge, téléphone, opérateur, email, date de naissance, famille, amis, collègues, emploi, éducation, localisation, passions, liens vers des personnes proches/collègues, liens vers des pages qui pourraient apporter plus d'infos, etc.).
+
+Si la personne est une personnalité publique très connue, ajoute des informations supplémentaires pertinentes.
+
+Mettez en valeur toutes les informations, même les petits détails qui concernent la personne.
+
+Quand il y a des photos, publications.. fais en sorte qu'elles soient visibles sur la page.
+
+Si les données contiennent des posts, assurez-vous qu'ils sont bien formatés et faciles à lire, avec image, descriptions.. etc.
+
+Fais en sorte que les liens ne soient pas en bleus, uniquement du texte souligné et cliquable.
+
+L'objectif est d'avoir le maximum d'informations sur la personne, dans le moindres détails, pour une analyse très poussée et approfondie. Ne négligez aucun détail.
+
+Vous pouvez créer des sections supplémentaires. N'affichez que les sections qui contiennent des données.
+Si tu trouves des sites ou données qui seraient intéressants de consulter pour obtenir plus d'infos, précise les.
+Il faut toujours citer les sources, mais n'inclus pas les liens qui n'ont pas de rapport avec les données personnelles de la personne. Par exemple des conditions d'utilisations, cookies etc, ça ne doit pas être inclus.
+La page doit être prête pour un affichage immédiat, sans commentaires ni explications. Tu dois me renvoyer uniquement le code HTML final.
+`;
+
+    console.log("Prompt GPT pour génération HTML :", prompt);
+
+    const responseAI = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }]
+    });
+
+    let gptResponse = responseAI.choices[0].message.content;
+    gptResponse = gptResponse.replace(/^```html|```$/g, '').trim();
+
+    return gptResponse;
+}
+
+async function analyzeRelevantSites(relevantSites) {
+    const relevantContent = {};
+
+    if (Array.isArray(relevantSites) && relevantSites[0] !== "Aucun site intéressant") {
+        for (const site of relevantSites) {
+            const siteName = site.replace(/https?:\/\/(www\.)?/, '').replace(/[^\w]/g, '_'); // Nom de fichier sécurisé
+            const analysis = await analyzeScreenshot(site, siteName);
+            relevantContent[site] = analysis;
+        }
+    }
+
+    return relevantContent;
+}
 
 router.post('/osint', auth, (req, res, next) => {
     if (req.user.role === 'admin') {
@@ -735,78 +953,149 @@ router.post('/osint', auth, (req, res, next) => {
     }
 
     try {
+        // Étape 1 : Recueillir les données OSINT initiales
         const osintData = await gatherOSINTData(firstName, lastName, phone, email, username);
+        console.log("Données OSINT recueillies :", osintData);
 
+        // Étape 2 : Obtenir les sites pertinents via GPT
+        const relevantSites = await getRelevantSitesGPT(osintData);
+        console.log("Sites pertinents recommandés :", relevantSites);
+
+        // Étape 3 : Analyser les sites pertinents
+        const relevantContent = await analyzeRelevantSites(relevantSites);
+        console.log("Contenu des sites pertinents :", relevantContent);
+
+        // Ajouter les résultats à osintData
+        osintData.relevantSites = relevantSites;
+        osintData.relevantContent = relevantContent;
+
+        // Étape 4 : Générer la page HTML finale via GPT
         const baseTemplatePath = path.join(__dirname, '../osint/index.html');
         let baseTemplate = fs.readFileSync(baseTemplatePath, 'utf-8');
 
-        const prompt = `
-    Informations de base fournies :
-    - Prénom : ${firstName || "non fourni"}
-    - Nom : ${lastName || "non fourni"}
-    - Téléphone : ${phone || "non fourni"}
-    - Email : ${email || "non fourni"}
+        const finalHTML = await generateFinalHTML(osintData, baseTemplate);
 
-    Données collectées :
-    - Vérification email : ${JSON.stringify(osintData.emailVerification || {}, null, 2)}
-    - Vérification téléphone : ${JSON.stringify(osintData.phoneVerification || {}, null, 2)}
-    - Données Instagram : ${JSON.stringify(osintData.instagramInfo || {}, null, 2)}
-
-    Modèle HTML à utiliser :
-    \`\`\`html
-    ${baseTemplate}
-    \`\`\`
-
-    Générez une page HTML professionnelle qui présente la personne de manière claire et organisée. 
-    Analysez particulièrement les éléments de données collectés et mettez en évidence chaque détails (famille, amis, collègues, emploi, éducation, localisation, passions, liens vers des personnes proches/collègues, liens vers des pages qui pourraient apporter plus d'infos, etc.).
-
-    Si la personne est une personnalité publique que tu connais, ajoute des informations supplémentaires pertinentes.
-
-    Mettez en valeur toutes les informations, même les petits détails qui concernent la personne.
-
-    Quand il y a des photos, publications.. fais en sorte qu'elles soient visibles sur la page.
-
-    Si les données contiennent des posts, assurez-vous qu'ils sont bien formatés et faciles à lire, avec image, descriptions.. etc.
-
-    Fais en sorte que les liens ne soient pas en bleus, uniquement du texte souligné et cliquable.
-
-    Vous pouvez créer des sections supplémentaires.
-    Si tu trouves des sites ou données qui seraient intéressants de consulter pour obtenir plus d'infos, précise les.
-    Il faut toujours citer les sources, mais n'inclus pas les liens qui n'ont pas de rapport avec les données personnelles de la personne. Par exemple des conditions d'utilisations, cookies etc, ça ne doit pas être inclus.
-    La page doit être prête pour un affichage immédiat, sans commentaires ni explications. Tu dois me renvoyer uniquement le code HTML final.
-`;
-        console.log(prompt);
-
-        const responseAI = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [{ role: 'user', content: prompt }],
-        });
-
-        let gptResponse = responseAI.choices[0].message.content;
-
-        if (gptResponse.startsWith("```html") && gptResponse.endsWith("```")) {
-            gptResponse = gptResponse.slice(7, -3).trim();
-        } else if (gptResponse.startsWith("```") && gptResponse.endsWith("```")) {
-            gptResponse = gptResponse.slice(3, -3).trim();
-        }
-
+        // Écrire le contenu généré dans le fichier HTML
         const generatedFilePath = path.join(__dirname, '../generated/osint/index.html');
         if (!fs.existsSync(path.dirname(generatedFilePath))) {
             fs.mkdirSync(path.dirname(generatedFilePath), { recursive: true });
         }
 
-        fs.writeFileSync(generatedFilePath, gptResponse);
+        fs.writeFileSync(generatedFilePath, finalHTML);
 
         res.status(200).json({
             link: `http://localhost:5000/generated/osint/index.html`,
             data: osintData
         });
     } catch (error) {
+        console.error("Erreur lors de la génération de la page OSINT :", error.message);
         res.status(500).json({
             msg: 'Erreur lors de la génération de la page OSINT',
             error: error.message
         });
     }
 });
+
+async function getWebsiteData(url, nomDeLimageAGenerer) {
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+            ]
+        });
+
+        const page = await browser.newPage();
+
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        // Désactiver le CSS mais laisser la structure HTML visible
+        await page.evaluate(() => {
+            const styleSheets = document.styleSheets;
+            for (let i = 0; i < styleSheets.length; i++) {
+                try {
+                    styleSheets[i].disabled = true;
+                } catch (e) {
+                    console.warn('Unable to disable stylesheet:', e);
+                }
+            }
+        });
+
+        // Créer le dossier si nécessaire
+        const screenshotDir = path.join(__dirname, '../generated/osint/data');
+        if (!fs.existsSync(screenshotDir)) {
+            fs.mkdirSync(screenshotDir, { recursive: true });
+        }
+
+        const screenshotPath = path.join(screenshotDir, nomDeLimageAGenerer);
+        await page.screenshot({ path: screenshotPath, fullPage: true, type: 'png' });
+
+        // Lire le fichier de l'image et l'encoder en base64
+        const base64Image = fs.readFileSync(screenshotPath, { encoding: 'base64' });
+        const dataUrl = `data:image/png;base64,${base64Image}`;
+
+        // Préparer la requête à l'API OpenAI avec l'image encodée en base64
+        const responseAI = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [
+                {
+                    role: 'user',
+                    content: [
+                        {
+                            type: 'text',
+                            text: `Voici une image d'un site où j'ai probablement marqué des infos sur moi. Rédige un code JSON pour récapituler mes infos perso (prénom, etc) présentes sur le screen pour me rappeler tout ce que j'ai mis dessus. Je veux toutes les informations dans le moindre détail. N'invente aucune information. Ta réponse contiendra uniquement un JSON valide, sans explication ou commentaire supplémentaire. Ne mets pas le JSON dans des balises de code. Si tu n'as aucune info, crée un json vide. Si y'a des sites pertinents, précise bien leur liens dans le JSON. Affiche le maximum d'informations possibles.`
+                        },
+                        {
+                            type: 'image_url',
+                            image_url: {
+                                url: dataUrl
+                            }
+                        }
+                    ],
+                },
+            ],
+        });
+
+        let gptResponse = responseAI.choices[0].message.content;
+        console.log("Réponse GPT IMAGE :", gptResponse);
+
+        // Nettoyer la réponse pour extraire le JSON
+        gptResponse = extractJSON(gptResponse);
+
+        // S'assurer que la réponse est bien un JSON valide
+        let websiteData;
+        try {
+            websiteData = JSON.parse(gptResponse);
+        } catch (parseError) {
+            console.error("Erreur lors du parsing du JSON :", parseError.message);
+            console.error("Réponse GPT :", gptResponse);
+            return {
+                success: false,
+                error: "Erreur lors du parsing du JSON",
+                details: parseError.message
+            };
+        }
+
+        return {
+            success: true,
+            data: websiteData
+        };
+
+    } catch (error) {
+        console.error("getWebsiteData : Erreur lors de la récupération des données du site :", error.message);
+        return {
+            success: false,
+            error: "getWebsiteData : Erreur lors de la récupération des données du site",
+            details: error.message
+        };
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
+    }
+}
 
 module.exports = router;

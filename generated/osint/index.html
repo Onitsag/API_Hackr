@@ -1,113 +1,386 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OSINT Report</title>
+    <title>Rapport OSINT - Kévin Niel</title>
+    <!-- Font Awesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      integrity="sha512-p6N1+2R7bzE2kV5qGb3xOgl5H8P+n8IRjD0V0Y6JbO4nM8e7KvK7vR1GqvZ8HbyLxkM0Sx48VBY1ERqM1JkNIA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
     <style>
+        /* Reset CSS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Variables de couleurs */
+        :root {
+            --background-color: #0d0d0d;
+            --primary-color: #00ff7f;
+            --secondary-color: #1e1e1e;
+            --text-color: #c7c7c7;
+            --accent-color: #ff0040;
+            --border-color: #00ff7f;
+            --font-family: 'Courier New', Courier, monospace;
+            --transition-speed: 0.3s;
+        }
+
         body {
-            background-color: #121212;
-            color: #00ff00;
-            font-family: monospace;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            line-height: 1.6;
+            padding: 20px;
         }
+
         h1, h2 {
-            color: #00ff00;
-            border-bottom: 1px solid #00ff00;
-            padding-bottom: 5px;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            position: relative;
         }
+
+        h1::after, h2::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -5px;
+            width: 50px;
+            height: 2px;
+            background-color: var(--primary-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
         .info-section {
-            margin: 20px 0;
-            padding: 10px;
-            border: 1px solid #00ff00;
-            border-radius: 5px;
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+            transition: transform var(--transition-speed), box-shadow var(--transition-speed);
         }
+
+        .info-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px rgba(0, 255, 127, 0.4);
+        }
+
         .info-title {
-            font-weight: bold;
-            color: #00ff00;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
         }
+
+        .info-title i {
+            margin-right: 10px;
+            font-size: 1.2em;
+            color: var(--primary-color);
+        }
+
         .info-content {
-            margin-left: 15px;
-            color: #d1ffd1;
+            padding-left: 15px;
+            color: var(--text-color);
         }
-        a {
-            color: #d1ffd1;
-            text-decoration: underline;
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--secondary-color);
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+            z-index: 1000;
+            max-width: 220px;
+        }
+
+        nav a {
+            display: flex;
+            align-items: center;
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-bottom: 10px;
+            transition: color var(--transition-speed);
+            font-size: 0.95em;
+        }
+
+        nav a i {
+            margin-right: 10px;
+            font-size: 1.1em;
+            width: 20px;
+            text-align: center;
+        }
+
+        nav a:hover {
+            color: var(--accent-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                position: static;
+                margin-bottom: 20px;
+                max-width: 100%;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scroll behavior */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--secondary-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        /* Button Style */
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color var(--transition-speed);
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-color);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--text-color);
+            font-size: 0.8em;
+        }
+
+        /* Dark Mode Toggle */
+        .dark-mode-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+            transition: background-color var(--transition-speed), transform var(--transition-speed);
+        }
+
+        .dark-mode-toggle:hover {
+            transform: rotate(90deg);
+            background-color: var(--accent-color);
+        }
+
+        /* Light Mode Styles */
+        body.light-mode {
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        body.light-mode .info-section {
+            background-color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+        }
+
+        body.light-mode nav {
+            background-color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
+        }
+
+        body.light-mode nav a {
+            color: var(--primary-color);
+        }
+
+        body.light-mode nav a:hover {
+            color: var(--accent-color);
+        }
+
+        body.light-mode .info-content {
+            color: #333;
+        }
+
+        body.light-mode ::-webkit-scrollbar-track {
+            background: #f4f4f4;
+        }
+
+        body.light-mode ::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+        }
+
+        body.light-mode .btn {
+            background-color: #00ff7f;
+            color: #0d0d0d;
+        }
+
+        body.light-mode .btn:hover {
+            background-color: var(--accent-color);
+        }
+
+        body.light-mode .dark-mode-toggle {
+            background-color: #fff;
+            border-color: var(--primary-color);
+        }
+
+        body.light-mode .dark-mode-toggle:hover {
+            background-color: var(--accent-color);
+        }
+
+        body.light-mode .info-title i {
+            color: var(--primary-color);
+        }
+
+        .profile-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>OSINT Report for Kevin Niel</h1>
-    
-    <div class="info-section" id="personal-info">
-        <h2>Personal Information</h2>
-        <div class="info-content" id="personal-content">
-            <p><span class="info-title">Name:</span> Kevin Niel</p>
-            <p><span class="info-title">Phone:</span> +33699465044</p>
-            <p><span class="info-title">Email:</span> <a href="mailto:k.niel.pro@gmail.com">k.niel.pro@gmail.com</a></p>
-            <p><span class="info-title">Email Status:</span> Valid and Deliverable (Score: 92)</p>
-            <p><span class="info-title">Carrier:</span> Bouygues Telecom SA</p>
+    <!-- Bouton Toggle Dark Mode -->
+    <div class="dark-mode-toggle" id="dark-mode-toggle" title="Basculer le Mode Sombre">
+        <i class="fas fa-moon"></i>
+    </div>
+
+    <!-- Navigation -->
+    <nav>
+        <a href="#personal-info"><i class="fas fa-user"></i> Informations Personnelles</a>
+        <a href="#location-info"><i class="fas fa-map-marker-alt"></i> Localisation</a>
+        <a href="#jobs-info"><i class="fas fa-briefcase"></i> Emploi</a>
+        <a href="#professional-project-info"><i class="fas fa-cogs"></i> Projets Professionnels</a>
+        <a href="#social-info"><i class="fas fa-globe"></i> Réseaux Sociaux & Intérêts</a>
+        <a href="#accounts-info"><i class="fas fa-link"></i> Comptes Connexes</a>
+    </nav>
+
+    <!-- Contenu Principal -->
+    <div class="container">
+        <h1 class="fade-in">Rapport OSINT pour <span id="target-name">Kévin Niel</span></h1>
+        
+        <div class="info-section fade-in" id="personal-info">
+            <h2 class="info-title"><i class="fas fa-user"></i> Informations Personnelles</h2>
+            <div class="info-content" id="personal-content">
+                <img src="https://media.licdn.com/dms/image/D4E03AQEIejSAXk5wEA/profile-displayphoto-shrink_200_200/0/1720002513352?e=2147483647&v=beta&t=0-5wfMJQ41YJ5CkoiJoEnWG01H-B1GgmMha_FIvmYT4" alt="Kévin Niel" class="profile-image">
+                <p><strong>Nom :</strong> Kévin Niel</p>
+                <p><strong>Email :</strong> <span style="text-decoration: underline;">k.niel.pro@gmail.com</span></p>
+                <p><strong>Téléphone :</strong> <span style="text-decoration: underline;">+33 699465044</span></p>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="location-info">
+            <h2 class="info-title"><i class="fas fa-map-marker-alt"></i> Localisation</h2>
+            <div class="info-content" id="location-content">
+                <p><strong>Pays :</strong> France</p>
+                <p><strong>Opérateur :</strong> Bouygues Telecom SA</p>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="jobs-info">
+            <h2 class="info-title"><i class="fas fa-briefcase"></i> Emploi</h2>
+            <div class="info-content" id="jobs-content">
+                <p><strong>Profession :</strong> Expert en Informatique</p>
+                <p><strong>Compétences :</strong> Développement, Formation, IA, Consulting</p>
+                <a href="https://kevinniel.fr/" class="btn" target="_blank">Voir plus</a>
+                <a href="https://fr.linkedin.com/in/kevinniel" class="btn" target="_blank">Voir LinkedIn</a>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="professional-project-info">
+            <h2 class="info-title"><i class="fas fa-cogs"></i> Projets Professionnels</h2>
+            <div class="info-content" id="professional-project-content">
+                <img src="https://avatars.githubusercontent.com/u/13029458?v=4" alt="GitHub" class="profile-image">
+                <p><strong>Compte GitHub :</strong> kevinniel</p>
+                <p>Professeur d'informatique et jury officiel pour des diplômes BAC+3 du ministère du travail.</p>
+                <a href="https://github.com/kevinniel" class="btn" target="_blank">Voir GitHub</a>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="social-info">
+            <h2 class="info-title"><i class="fas fa-globe"></i> Réseaux Sociaux & Intérêts</h2>
+            <div class="info-content" id="social-content">
+                <p><strong>Plateformes :</strong> LinkedIn, GitHub</p>
+                <p><strong>Intérêts :</strong> Développement web, Gestion de projet</p>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="accounts-info">
+            <h2 class="info-title"><i class="fas fa-link"></i> Comptes Connexes</h2>
+            <div class="info-content" id="accounts-content">
+                <p><strong>Compte LinkedIn :</strong> <span style="text-decoration: underline;">in/kevinniel</span></p>
+                <p><strong>Site Personnel :</strong> <span style="text-decoration: underline;">kevinniel.fr</span></p>
+            </div>
         </div>
     </div>
 
-    <div class="info-section" id="location-info">
-        <h2>Location</h2>
-        <div class="info-content" id="location-content">
-            <p><span class="info-title">Country:</span> France</p>
-        </div>
-    </div>
+    <!-- Footer -->
+    <footer>
+        &copy; 2024 Rapport OSINT. Tous droits réservés.
+    </footer>
 
-    <div class="info-section" id="instagram-info">
-        <h2>Instagram</h2>
-        <div class="info-content" id="instagram-content">
-            <p><span class="info-title">First Name:</span> Kévin</p>
-            <p><span class="info-title">Last Name:</span> NIEL</p>
-            <p><span class="info-title">Profession:</span> Expert en Informatique</p>
-            <p><span class="info-title">Activities:</span> Développement, Formation, IA, Consulting</p>
-            <p><span class="info-title">Website:</span> <a href="http://kevinniel.fr" target="_blank">kevinniel.fr</a></p>
-        </div>
-    </div>
+    <script>
+        // Script pour remplir dynamiquement le nom cible (optionnel)
+        document.addEventListener('DOMContentLoaded', () => {
+            const targetName = "Kévin Niel";
+            document.getElementById('target-name').textContent = targetName;
 
-    <div class="info-section" id="twitter-info">
-        <h2>Twitter</h2>
-        <div class="info-content" id="twitter-content">
-            <p>No data available.</p>
-        </div>
-    </div>
-
-    <div class="info-section" id="family-info">
-        <h2>Family, Friends & Colleagues</h2>
-        <div class="info-content" id="family-content">
-            <p>No data available.</p>
-        </div>
-    </div>
-
-    <div class="info-section" id="work-info">
-        <h2>Education & Work</h2>
-        <div class="info-content" id="work-content">
-            <p>No data available.</p>
-        </div>
-    </div>
-
-    <div class="info-section" id="social-info">
-        <h2>Social Media & Interests</h2>
-        <div class="info-content" id="social-content">
-            <p>No data available beyond Instagram details.</p>
-        </div>
-    </div>
-
-    <div class="info-section" id="related-accounts-info">
-        <h2>Related Accounts</h2>
-        <div class="info-content" id="related-accounts-content">
-            <p>No data available.</p>
-        </div>
-    </div>
-
-    <div class="info-section" id="additional-resources">
-        <h2>Additional Resources</h2>
-        <div class="info-content" id="additional-resources-content">
-            <p>Visit Kévin's <a href="http://kevinniel.fr" target="_blank">personal website</a> for more information and updates on his professional activities.</p>
-        </div>
-    </div>
-
+            // Dark Mode Toggle
+            const toggleButton = document.getElementById('dark-mode-toggle');
+            toggleButton.addEventListener('click', () => {
+                document.body.classList.toggle('light-mode');
+                // Changer l'icône en fonction du mode
+                if (document.body.classList.contains('light-mode')) {
+                    toggleButton.innerHTML = '<i class="fas fa-sun"></i>';
+                } else {
+                    toggleButton.innerHTML = '<i class="fas fa-moon"></i>';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
