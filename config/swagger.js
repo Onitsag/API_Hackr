@@ -15,8 +15,18 @@ const options = {
         description: 'Serveur local'
       }
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Entrez votre token JWT dans le format : Bearer {token}',
+        }
+      }
+    }
   },
-  apis: ['./routes/*.js'], // Chemin vers les fichiers contenant les commentaires Swagger
+  apis: ['./routes/*.js'],
 };
 
 const swaggerSpec = swaggerJSDoc(options);

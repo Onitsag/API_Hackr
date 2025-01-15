@@ -19,6 +19,7 @@ const auth = async (req, res, next) => {
         // Attacher l'utilisateur récupéré à la requête
         req.user = {
             userId: user.id,
+            id: user.id,
             username: user.username,
             role: user.role
         };

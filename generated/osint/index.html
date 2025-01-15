@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rapport OSINT - Kévin Niel</title>
+    <title>Rapport OSINT - Kévin NIEL</title>
     <!-- Font Awesome CDN -->
     <link
       rel="stylesheet"
@@ -107,7 +107,7 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 255, 127, 0.2);
-            z-index: 1000;
+            z-index: 1000; /* Assure que la navbar reste au-dessus */
             max-width: 220px;
         }
 
@@ -273,14 +273,6 @@
         body.light-mode .info-title i {
             color: var(--primary-color);
         }
-
-        .profile-image {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-right: 10px;
-        }
     </style>
 </head>
 <body>
@@ -293,7 +285,8 @@
     <nav>
         <a href="#personal-info"><i class="fas fa-user"></i> Informations Personnelles</a>
         <a href="#location-info"><i class="fas fa-map-marker-alt"></i> Localisation</a>
-        <a href="#jobs-info"><i class="fas fa-briefcase"></i> Emploi</a>
+        <a href="#insta-info"><i class="fab fa-instagram"></i> Instagram</a>
+        <a href="#jobs-info"><i class="fas fa-briefcase"></i> Emplois</a>
         <a href="#professional-project-info"><i class="fas fa-cogs"></i> Projets Professionnels</a>
         <a href="#social-info"><i class="fas fa-globe"></i> Réseaux Sociaux & Intérêts</a>
         <a href="#accounts-info"><i class="fas fa-link"></i> Comptes Connexes</a>
@@ -301,15 +294,24 @@
 
     <!-- Contenu Principal -->
     <div class="container">
-        <h1 class="fade-in">Rapport OSINT pour <span id="target-name">Kévin Niel</span></h1>
-        
+        <h1 class="fade-in">Rapport OSINT pour Kévin NIEL</h1>
+
         <div class="info-section fade-in" id="personal-info">
             <h2 class="info-title"><i class="fas fa-user"></i> Informations Personnelles</h2>
             <div class="info-content" id="personal-content">
-                <img src="https://media.licdn.com/dms/image/D4E03AQEIejSAXk5wEA/profile-displayphoto-shrink_200_200/0/1720002513352?e=2147483647&v=beta&t=0-5wfMJQ41YJ5CkoiJoEnWG01H-B1GgmMha_FIvmYT4" alt="Kévin Niel" class="profile-image">
-                <p><strong>Nom :</strong> Kévin Niel</p>
-                <p><strong>Email :</strong> <span style="text-decoration: underline;">k.niel.pro@gmail.com</span></p>
-                <p><strong>Téléphone :</strong> <span style="text-decoration: underline;">+33 699465044</span></p>
+                <p><strong>Nom :</strong> Kévin NIEL</p>
+                <p><strong>Prénom :</strong> Kévin</p>
+                <p><strong>Pseudo Instagram :</strong> kevinnieloff</p>
+                <p><strong>Profession :</strong> Expert en Informatique</p>
+                <p><strong>Activités :</strong> Développement, Formation, IA, Consulting</p>
+                <p><strong>Site Web :</strong> <a href="https://kevinniel.fr" target="_blank">kevinniel.fr</a></p>
+                <p><strong>Publications Instagram :</strong> 3</p>
+                <p><strong>Followers Instagram :</strong> 77</p>
+                <p><strong>Following Instagram :</strong> 14</p>
+                <p><strong>Email :</strong> k.niel.pro@gmail.com</p>
+                <p><strong>Téléphone :</strong> 0699465044</p>
+                <p><strong>Opérateur :</strong> Bouygues Telecom SA</p>
+                <p><strong>Type de ligne :</strong> Mobile</p>
             </div>
         </div>
 
@@ -317,45 +319,61 @@
             <h2 class="info-title"><i class="fas fa-map-marker-alt"></i> Localisation</h2>
             <div class="info-content" id="location-content">
                 <p><strong>Pays :</strong> France</p>
-                <p><strong>Opérateur :</strong> Bouygues Telecom SA</p>
+                <p><strong>Code Pays :</strong> FR</p>
+                <p><strong>Nom Pays :</strong> France</p>
+            </div>
+        </div>
+
+        <div class="info-section fade-in" id="insta-info">
+            <h2 class="info-title"><i class="fab fa-instagram"></i> Instagram</h2>
+            <div class="info-content" id="insta-content">
+                <p><strong>Pseudo :</strong> kevinnieloff</p>
+                <p><strong>Profession :</strong> Expert en Informatique</p>
+                <p><strong>Activités :</strong> Développement, Formation, IA, Consulting</p>
+                <p><strong>Site Web :</strong> <a href="https://kevinniel.fr" target="_blank">kevinniel.fr</a></p>
+                <p><strong>Publications :</strong> 3</p>
+                <p><strong>Followers :</strong> 77</p>
+                <p><strong>Following :</strong> 14</p>
             </div>
         </div>
 
         <div class="info-section fade-in" id="jobs-info">
-            <h2 class="info-title"><i class="fas fa-briefcase"></i> Emploi</h2>
+            <h2 class="info-title"><i class="fas fa-briefcase"></i> Emplois</h2>
             <div class="info-content" id="jobs-content">
-                <p><strong>Profession :</strong> Expert en Informatique</p>
-                <p><strong>Compétences :</strong> Développement, Formation, IA, Consulting</p>
-                <a href="https://kevinniel.fr/" class="btn" target="_blank">Voir plus</a>
-                <a href="https://fr.linkedin.com/in/kevinniel" class="btn" target="_blank">Voir LinkedIn</a>
+                <p><strong>Entreprise :</strong> SARL NK Informatique</p>
+                <p><strong>Poste :</strong> Dirigeant</p>
+                <p><strong>Site Web :</strong> <a href="https://kevinniel.fr" target="_blank">kevinniel.fr</a></p>
             </div>
         </div>
 
         <div class="info-section fade-in" id="professional-project-info">
             <h2 class="info-title"><i class="fas fa-cogs"></i> Projets Professionnels</h2>
             <div class="info-content" id="professional-project-content">
-                <img src="https://avatars.githubusercontent.com/u/13029458?v=4" alt="GitHub" class="profile-image">
-                <p><strong>Compte GitHub :</strong> kevinniel</p>
-                <p>Professeur d'informatique et jury officiel pour des diplômes BAC+3 du ministère du travail.</p>
-                <a href="https://github.com/kevinniel" class="btn" target="_blank">Voir GitHub</a>
+                <p><strong>Projet :</strong> Chat GPT 4 - Apprenez à exploiter le potentiel de l'Intelligence Artificielle</p>
+                <p><strong>Description :</strong> Livre sur l'exploitation de l'Intelligence Artificielle.</p>
+                <a href="https://www.amazon.fr/Chat-GPT-exploiter-lIntelligence-Artificielle/dp/B0C1JJTJJ6" class="btn" target="_blank">Voir Projet</a>
             </div>
         </div>
 
         <div class="info-section fade-in" id="social-info">
             <h2 class="info-title"><i class="fas fa-globe"></i> Réseaux Sociaux & Intérêts</h2>
             <div class="info-content" id="social-content">
-                <p><strong>Plateformes :</strong> LinkedIn, GitHub</p>
-                <p><strong>Intérêts :</strong> Développement web, Gestion de projet</p>
+                <p><strong>GitHub :</strong> <a href="https://github.com/kevinniel" target="_blank">kevinniel</a></p>
+                <p><strong>LinkedIn :</strong> <a href="https://fr.linkedin.com/in/kevinniel" target="_blank">Kévin NIEL</a></p>
+                <p><strong>Malt :</strong> <a href="https://www.malt.fr/profile/nielkevin" target="_blank">Kevin Niel</a></p>
+                <p><strong>Intérêts :</strong> Développement, Formation, IA, Consulting</p>
             </div>
         </div>
 
         <div class="info-section fade-in" id="accounts-info">
             <h2 class="info-title"><i class="fas fa-link"></i> Comptes Connexes</h2>
             <div class="info-content" id="accounts-content">
-                <p><strong>Compte LinkedIn :</strong> <span style="text-decoration: underline;">in/kevinniel</span></p>
-                <p><strong>Site Personnel :</strong> <span style="text-decoration: underline;">kevinniel.fr</span></p>
+                <p><strong>GitHub :</strong> <a href="https://github.com/kevinniel" target="_blank">kevinniel</a></p>
+                <p><strong>LinkedIn :</strong> <a href="https://fr.linkedin.com/in/kevinniel" target="_blank">Kévin NIEL</a></p>
+                <p><strong>Malt :</strong> <a href="https://www.malt.fr/profile/nielkevin" target="_blank">Kevin Niel</a></p>
             </div>
         </div>
+
     </div>
 
     <!-- Footer -->
@@ -366,7 +384,7 @@
     <script>
         // Script pour remplir dynamiquement le nom cible (optionnel)
         document.addEventListener('DOMContentLoaded', () => {
-            const targetName = "Kévin Niel";
+            const targetName = "Kévin NIEL"; // Vous pouvez remplacer cela dynamiquement
             document.getElementById('target-name').textContent = targetName;
 
             // Dark Mode Toggle

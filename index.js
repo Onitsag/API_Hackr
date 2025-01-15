@@ -27,6 +27,11 @@ app.use('/osint', express.static(path.join(__dirname, 'osint')));
 app.use('/api/auth', authRoutes);
 app.use('/api/features', featureRoutes);
 
+app.get('/', (req, res) => {
+  res.send('Bienvenue sur l\'API HackR!');
+});
+
+
 // Configurer Swagger
 setupSwaggerDocs(app);
 
