@@ -281,7 +281,7 @@ router.get('/logs/action', auth, roleCheck(['admin']), async (req, res) => {
  * @swagger
  * /api/features/verify-email:
  *   post:
- *     summary: Vérifier l'existence d'une adresse e-mail (nécessite la permission "verify_email")
+ *     summary: Vérifier l'existence d'une adresse e-mail
  *     tags: [Features]
  *     security:
  *       - bearerAuth: []
@@ -374,7 +374,7 @@ router.post('/verify-email', auth, (req, res, next) => {
  * @swagger
  * /api/features/send-emails:
  *   post:
- *     summary: Envoyer des e-mails multiples (nécessite la permission "send_emails")
+ *     summary: Envoyer des e-mails multiples
  *     tags: [Features]
  *     security:
  *       - bearerAuth: []
@@ -467,7 +467,7 @@ router.post('/send-emails', auth, (req, res, next) => {
  * @swagger
  * /api/features/phishing:
  *   post:
- *     summary: Générer une page web en utilisant GPT (nécessite la permission "generate_webpage")
+ *     summary: Générer une page web en utilisant GPT
  *     tags: [Features]
  *     security:
  *       - bearerAuth: []
